@@ -283,15 +283,9 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_repetitio
             #pragma unroll
             for (int j=0; j<4; j++){
                 float &p = ((float*)&p4)[j];
-                bool u = (p >= __uint_as_float(pivot.y));
-                cnt.y += u;
-                l4.y = fmaf(p, u, l4.y);
-                u = (p >= __uint_as_float(pivot.z));
-                cnt.z += u;
-                l4.z = fmaf(p, u, l4.z);
-                u = (p >= __uint_as_float(pivot.w));
-                cnt.w += u;
-                l4.w = fmaf(p, u, l4.w);
+                if (p >= __uint_as_float(pivot.y)) {cnt.y ++; l4.y += p;}
+                if (p >= __uint_as_float(pivot.z)) {cnt.z ++; l4.z += p;}
+                if (p >= __uint_as_float(pivot.w)) {cnt.w ++; l4.w += p;}
             }
         }
         blockReduceAll(cnt.y, SumOp<unsigned>{}, SumOp<unsigned>::identity(), reduce_buf);
@@ -346,11 +340,8 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_repetitio
         #pragma unroll
         for (int j=0; j<4; j++){
             float &p = ((float*)&p4)[j];
-            bool u0 = (p == threshold);
-            bool u1 = (p > threshold);
-            eqk += u0;
-            gtk += u1;
-            gtp = fmaf(p, u1, gtp);
+            if (p == threshold) eqk ++;
+            if (p >  threshold) {gtk ++; gtp += p;}
         }
     }
     // s: shared all
@@ -598,15 +589,9 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_temperatu
             #pragma unroll
             for (int j=0; j<4; j++){
                 float &p = ((float*)&p4)[j];
-                bool u = (p >= __uint_as_float(pivot.y));
-                cnt.y += u;
-                l4.y = fmaf(p, u, l4.y);
-                u = (p >= __uint_as_float(pivot.z));
-                cnt.z += u;
-                l4.z = fmaf(p, u, l4.z);
-                u = (p >= __uint_as_float(pivot.w));
-                cnt.w += u;
-                l4.w = fmaf(p, u, l4.w);
+                if (p >= __uint_as_float(pivot.y)) {cnt.y ++; l4.y += p;}
+                if (p >= __uint_as_float(pivot.z)) {cnt.z ++; l4.z += p;}
+                if (p >= __uint_as_float(pivot.w)) {cnt.w ++; l4.w += p;}
             }
         }
         blockReduceAll(cnt.y, SumOp<unsigned>{}, SumOp<unsigned>::identity(), reduce_buf);
@@ -661,11 +646,8 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_temperatu
         #pragma unroll
         for (int j=0; j<4; j++){
             float &p = ((float*)&p4)[j];
-            bool u0 = (p == threshold);
-            bool u1 = (p > threshold);
-            eqk += u0;
-            gtk += u1;
-            gtp = fmaf(p, u1, gtp);
+            if (p == threshold) eqk ++;
+            if (p >  threshold) {gtk ++; gtp += p;}
         }
     }
     // s: shared all
@@ -761,7 +743,7 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_topp_kern
     const float *__restrict__ logits,    // (B, V) if T == 1; If T != 1, only logits[:, T-1, :] is read. This avoids another copying operation
           int   *__restrict__ outputs,   // (B,)
           RAND  *__restrict__ states,    // random state, typedef curandStatePhilox4_32_10_t RAND;
-          float *__restrict__ probs,   // probs (in L2 cache)
+          float *__restrict__ probs,     // probs (in L2 cache)
     const float top_p
 ) {
     const int b = blockIdx.x;
@@ -842,12 +824,9 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_topp_kern
             #pragma unroll
             for (int j=0; j<4; j++){
                 float &p = ((float*)&p4)[j];
-                bool u = (p >= __uint_as_float(pivot.y));
-                l4.y = fmaf(p, u, l4.y);
-                u = (p >= __uint_as_float(pivot.z));
-                l4.z = fmaf(p, u, l4.z);
-                u = (p >= __uint_as_float(pivot.w));
-                l4.w = fmaf(p, u, l4.w);
+                if (p >= __uint_as_float(pivot.y)) l4.y += p;
+                if (p >= __uint_as_float(pivot.z)) l4.z += p;
+                if (p >= __uint_as_float(pivot.w)) l4.w += p;
             }
         }
         __syncthreads();
@@ -891,10 +870,12 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_topp_kern
         #pragma unroll
         for (int j=0; j<4; j++){
             float &p = ((float*)&p4)[j];
-            bool u0 = (p == threshold);
-            bool u1 = (p > threshold);
-            eqk += u0;
-            gtp = fmaf(p, u1, gtp);
+            // bool u0 = (p == threshold);
+            // bool u1 = (p > threshold);
+            // eqk += u0;
+            // gtp = fmaf(p, u1, gtp);
+            if (p == threshold) eqk ++;
+            if (p >  threshold) gtp += p;
         }
     }
     float    cgtp = blockInclusiveScan(gtp, reduce_buf, &sgtp);
