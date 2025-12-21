@@ -217,7 +217,7 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_repetitio
             //     P0f(fl);
             // }
             float &fp = ((float*)&p4)[j];
-            fl = sf(sf(fl-fp) * log2_inv_temp);
+            fl = sf((sf(fl)-fp) * log2_inv_temp);
             maxu = max(maxu, fl);
             // ((float*)&l4)[j] = fr;
         }
@@ -225,10 +225,6 @@ __global__ void __launch_bounds__(BLOCKDIM_X_SAMPLE, 1) batch_sampling_repetitio
     }
     blockReduceAll(maxu, MaxOp<float>{}, MaxOp<float>::identity(), reduce_buf);
     __syncthreads();
-    // if(t==0){
-    //     P0f(maxu);
-    //     P0f(temperature);
-    // }
     float exp_denom = 0;
     for (int i=t; i<V4; i+=d) {
         l4 = ((float4*)probs)[i];
