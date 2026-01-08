@@ -27,7 +27,7 @@ repetition_penalty = 0.1
 penalty_decay = 0.996
 states = sample.setup_rand(0, batch_size)
 logits = torch.rand(batch_size, vocab_size).to(0)
-penalties = torch.zeros(batch_size, batch_size).to(0)
+penalties = torch.zeros(batch_size, vocab_size).to(0)
 print(logits)
 print(logits.shape)
 samples = sample.batch_sampling_temperature_topk_topp(logits, states, temperature, top_k, top_p)
